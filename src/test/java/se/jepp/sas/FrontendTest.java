@@ -3,6 +3,7 @@ package se.jepp.sas;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Cookie;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.testng.Assert;
@@ -11,16 +12,21 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+
 public class FrontendTest {
     private ChromeDriver driver;
+    private JavascriptExecutor js;
 
     @BeforeClass
     public void setUpClass() {
         WebDriverManager.chromedriver().setup();
     }
+
     @BeforeMethod
     public void setUp() {
         driver = new ChromeDriver();
+        js = (JavascriptExecutor) driver;
         driver.get("https://www.sas.se/");
         driver.manage().window().maximize();
         Cookie cookie = new Cookie("_cookienew", "acknowledged");
@@ -32,6 +38,7 @@ public class FrontendTest {
         driver.manage().deleteAllCookies();
         driver.close();
     }
+
     @Test(groups = "Login")
     public void shouldTryToLoginWithInvalidDetails() throws InterruptedException {
         driver.findElement(By.xpath("/html/body/s4s-main-header/header/div/button/span")).click();
@@ -42,8 +49,9 @@ public class FrontendTest {
         driver.findElement(By.name("password-input")).click();
         driver.findElement(By.name("password-input")).sendKeys("test1234");
         driver.findElement(By.id("login-button")).click();
-        Assert.assertTrue(driver.findElement(By.xpath("/html/body/s4s-login/div[1]/div/form/div[2]/s4s-input[2]/span")).isEnabled());
+        Assert.assertTrue(driver.findElement(By.xpath("/html/body/s4s-login/div[1]/div/form/div[2]/s4s-input[2]/span")).isEnabled()); //checks if red banner after failed search is active
     }
+
     @Test
     public void shouldNavigateToSakerhetskontroll() throws InterruptedException {
         driver.findElement(By.xpath("/html/body/s4s-main-header/header/div/div/nav/ul/li[5]/a")).click();
@@ -53,6 +61,7 @@ public class FrontendTest {
         Thread.sleep(1000);
         Assert.assertTrue(driver.getCurrentUrl().equalsIgnoreCase("https://www.sas.se/reseinfo/pa-flygplatsen/sakerhetskontroll-fast-track/"));
     }
+
     @Test(groups = "Booking")
     public void invalidBookingId() throws InterruptedException {
         driver.findElement(By.xpath("/html/body/s4s-main-header/header/div/div/nav/ul/li[4]")).click();
@@ -63,8 +72,9 @@ public class FrontendTest {
         driver.findElement(By.xpath("//*[@id=\"lastName\"]")).sendKeys("Test Test");
         driver.findElement(By.xpath("//*[@id=\"CheckinSearchBtn\"]")).click();
         Thread.sleep(2000);
-        Assert.assertTrue(driver.findElement(By.xpath("//*[@id=\"notificationMessage\"]")).isEnabled());
+        Assert.assertTrue(driver.findElement(By.xpath("//*[@id=\"notificationMessage\"]")).isEnabled()); //checks if red banner after failed search is active
     }
+
     @Test(groups = "Booking")
     public void shouldCancelBookingBeforePayment() throws InterruptedException {
         driver.findElement(By.xpath("//*[@id='cep-origin-input']")).click();
@@ -83,8 +93,22 @@ public class FrontendTest {
         driver.findElement(By.xpath("//*[@id='cep-search']")).click();
         Assert.assertTrue(driver.getCurrentUrl().contains("https://www.sas.se/book/flights/?search"));
     }
-    @Test
-    public void shouldRedirectToExternalBookingPage(){
 
+    @Test
+    public void shouldRedirectToExternalBookingPage() throws InterruptedException {
+        js.executeScript("window.scrollTo(0,3000)");
+        Thread.sleep(1000);
+        driver.findElement(By.linkText("Temaresor")).click();
+        Thread.sleep(1000);
+        Assert.assertEquals(driver.getCurrentUrl(), "https://www.sas.se/temaresor/");
+        driver.findElement(By.xpath("//*[@id=\"template\"]/div/div/section/button[3]")).click();
+        driver.findElement(By.cssSelector("#content > div > div > div > div > div > div:nth-child(3) > div > ul > li:nth-child(1) > div > div > picture > h3 > a")).click();
+        Assert.assertEquals(driver.getCurrentUrl(), "https://www.sas.se/temaresor/weekendresor/");
+        js.executeScript("window.scrollTo(0,1000)");
+        driver.findElement(By.xpath("//*[@id=\"content\"]/div/div/div[6]/div/div/div[7]/div/div[2]/div/button")).click();
+        ArrayList<String> newTab = new ArrayList<>(driver.getWindowHandles());
+        driver.switchTo().window(newTab.get(1));
+        Thread.sleep(1000);
+        Assert.assertEquals(driver.getCurrentUrl(), "https://www.apollo.se/");
     }
 }
